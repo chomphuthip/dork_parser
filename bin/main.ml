@@ -46,6 +46,10 @@ let rec parse (p: parser) : parser =
         { info with path_components = info.path_components @ [ path_component ] }
     in
 
+    let get_string_from (str: string) (from: int) : string =
+        String.sub str from (String.length str - from)
+    in
+
     let get_word (str: string) : (string * string) =
         let next_space_loc = try String.index str ' ' with Not_found -> -1 in
         if next_space_loc = -1 
@@ -53,9 +57,9 @@ let rec parse (p: parser) : parser =
             str, ""
         else
             let parsed_string = 
-                String.sub str 0 next_space_loc in
+                String.sub str 0 (String.length str - next_space_loc) in
             let rest_of_string = 
-                String.sub str (next_space_loc + 1) ((String.length str) - 1) in
+                get_string_from str (next_space_loc + 1) in
             (parsed_string, rest_of_string)
     in
 
@@ -66,22 +70,26 @@ let rec parse (p: parser) : parser =
        returns (parsed_word, rest_of_string)
      *)
     let parse_keyword (str: string) : (string * string) = 
-        if str.[0] != '"' then 
+        if str.[0] <> '"' then 
             get_word str
-        else
+        else 
             let next_quote_loc = try String.index str '"' with Not_found -> -1 in
             if next_quote_loc = -1 then 
                 get_word str
-            else
+            else 
                 let parsed_string = 
-                    String.sub str 1 next_quote_loc in
+                    String.sub str 1 (String.length str - next_quote_loc) in
                 let rest_of_string =
-                    String.sub str (next_quote_loc + 1) ((String.length str) - 1) in
+                    get_string_from str (next_quote_loc + 1) in
                 (parsed_string, rest_of_string)
     in
 
     if String.starts_with p.left_to_parse ~prefix:"intitle:" then 
-        let keyword, rest_of_string = parse_keyword p.left_to_parse in
+        (* take off intitle: *)
+        let to_parse = 
+            get_string_from p.left_to_parse 9 in
+
+        let keyword, rest_of_string = parse_keyword to_parse in
         let next : parser = {
             info = add_title_keyword keyword p.info;
             left_to_parse = rest_of_string
@@ -90,7 +98,11 @@ let rec parse (p: parser) : parser =
     else
 
     if String.starts_with p.left_to_parse ~prefix:"inurl:" then 
-        let component, rest_of_string = parse_keyword p.left_to_parse in
+        (* take off inurl: *)
+        let to_parse = 
+            get_string_from p.left_to_parse 6 in
+
+        let component, rest_of_string = parse_keyword to_parse in
         let next : parser = {
             info = add_path_component component p.info;
             left_to_parse = rest_of_string
