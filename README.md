@@ -1,1 +1,3 @@
-Simple ocaml program to render HTML pages from a Google Dork search. To be used in a Google Dork honeypot.
+Simple tool to generate web pages from google search queries.
+
+To be used in a Google Dork honeypot.
