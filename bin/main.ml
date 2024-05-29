@@ -132,7 +132,7 @@ let craft (craft_from: parser) : res =
     let open Tyxml.Html in 
 
     let ty_to_str ty = 
-        Format.asprintf "%a" (pp ()) ty in
+        Format.asprintf "%a" (pp ~indent:true ()) ty in
 
     let path = String.concat "/" craft_from.info.path_components in
     let title_str = String.concat " " craft_from.info.title_keywords in
@@ -150,20 +150,27 @@ let () =
     let parsed = parse before in
     let result = craft parsed in
 
-    print_endline "Path Components:";
+    print_endline "Path Components";
+    print_endline "---------------";
     List.iter print_endline parsed.info.path_components;
+    print_endline "";
 
-    print_endline "Title Keywords:";
+    print_endline "Title Keywords";
+    print_endline "---------------";
     List.iter print_endline parsed.info.title_keywords;
+    print_endline "";
 
     print_endline "Body Keywords:";
+    print_endline "---------------";
     List.iter print_endline parsed.info.body_keywords;
-    Printf.printf "\n";
+    print_endline "";
 
-    print_endline "---";
+    print_endline "###############";
+    print_endline "";
 
-    Printf.printf "Path: %s" result.path;
+    Printf.printf "Path: %s\n" result.path;
+    print_endline "";
+
     print_endline "Content:";
+    print_endline "";
     print_endline result.page;
-
-
