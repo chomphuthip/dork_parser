@@ -11,6 +11,11 @@ type parser = {
     left_to_parse: string;
 }
 
+type res = {
+    path : string;
+    page : string
+}
+
 
 let new_parser (input: string) : parser = {
     info = {
@@ -50,14 +55,19 @@ let rec parse (p: parser) : parser =
         String.sub str from (String.length str - from)
     in
 
+    let string_from_to (str: string) (from: int) (loc: int) : string = 
+        let dist = loc - from in
+        String.sub str from dist
+    in
+
     let get_word (str: string) : (string * string) =
-        let next_space_loc = try String.index str ' ' with Not_found -> -1 in
+        let next_space_loc = try String.index_from str 1 ' ' with Not_found -> -1 in
         if next_space_loc = -1 
         then 
             str, ""
         else
             let parsed_string = 
-                String.sub str 0 (String.length str - next_space_loc) in
+                string_from_to str 0 next_space_loc in
             let rest_of_string = 
                 get_string_from str (next_space_loc + 1) in
             (parsed_string, rest_of_string)
@@ -73,26 +83,27 @@ let rec parse (p: parser) : parser =
         if str.[0] <> '"' then 
             get_word str
         else 
-            let next_quote_loc = try String.index str '"' with Not_found -> -1 in
+            let next_quote_loc = try String.index_from str 1 '"' with Not_found -> -1 in
             if next_quote_loc = -1 then 
                 get_word str
-            else 
+            else begin
                 let parsed_string = 
-                    String.sub str 1 (String.length str - next_quote_loc) in
+                    string_from_to str 1 next_quote_loc in
                 let rest_of_string =
                     get_string_from str (next_quote_loc + 1) in
                 (parsed_string, rest_of_string)
+            end
     in
 
     if String.starts_with p.left_to_parse ~prefix:"intitle:" then 
         (* take off intitle: *)
         let to_parse = 
-            get_string_from p.left_to_parse 9 in
+            get_string_from p.left_to_parse 8 in
 
         let keyword, rest_of_string = parse_keyword to_parse in
         let next : parser = {
             info = add_title_keyword keyword p.info;
-            left_to_parse = rest_of_string
+            left_to_parse = String.trim rest_of_string
         } in
         parse next
     else
@@ -105,7 +116,7 @@ let rec parse (p: parser) : parser =
         let component, rest_of_string = parse_keyword to_parse in
         let next : parser = {
             info = add_path_component component p.info;
-            left_to_parse = rest_of_string
+            left_to_parse = String.trim rest_of_string
         } in
         parse next
     else
@@ -113,27 +124,46 @@ let rec parse (p: parser) : parser =
     let keyword, rest_of_string = parse_keyword p.left_to_parse in
     let next : parser = {
         info = add_body_keyword keyword p.info;
-        left_to_parse = rest_of_string
+        left_to_parse = String.trim rest_of_string
     } in
     parse next
 
-(* TODO
+let craft (craft_from: parser) : res =
+    let open Tyxml.Html in 
 
-    let craft (p: parser) (c: crafter) : crafter
+    let ty_to_str ty = 
+        Format.asprintf "%a" (pp ()) ty in
 
-*)
+    let path = String.concat "/" craft_from.info.path_components in
+    let title_str = String.concat " " craft_from.info.title_keywords in
+    let body_str = String.concat  "" craft_from.info.body_keywords in
 
+    let res_html = html
+        (head (title (txt title_str)) [meta ~a:[a_charset "utf-8"] ()])
+        (body [p [txt body_str]])
+    in
+
+    { path = path; page = ty_to_str res_html }
 
 let () = 
-    let parser = new_parser input in
-    let parsed = parse parser in
+    let before = new_parser input in
+    let parsed = parse before in
+    let result = craft parsed in
 
-    Printf.printf "Path Components:\n";
+    print_endline "Path Components:";
     List.iter print_endline parsed.info.path_components;
 
-    Printf.printf "Title Keywords:\n";
+    print_endline "Title Keywords:";
     List.iter print_endline parsed.info.title_keywords;
 
-    Printf.printf "Body Keywords:\n";
+    print_endline "Body Keywords:";
     List.iter print_endline parsed.info.body_keywords;
     Printf.printf "\n";
+
+    print_endline "---";
+
+    Printf.printf "Path: %s" result.path;
+    print_endline "Content:";
+    print_endline result.page;
+
+

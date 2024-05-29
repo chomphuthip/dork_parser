@@ -1,4 +1,4 @@
 (executable
  (public_name dork_parser)
  (name main)
- (libraries dork_parser))
+ (libraries tyxml dork_parser))
